@@ -17,3 +17,9 @@ docker \
 ```
 docker run -p 8081:8080 -it arnaudbriche/ipinfo-server
 ```
+
+## Usage
+
+```
+curl -v 'http://localhost:8081'
+```
