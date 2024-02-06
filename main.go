@@ -18,8 +18,10 @@ func main() {
 	}
 
 	var mux = http.NewServeMux()
-	mux.HandleFunc("/", ipInfoHandler)
-	mux.HandleFunc("/resolve", resolveHandler)
+	mux.HandleFunc("/ipinfo", ipInfoHandler)
+	mux.HandleFunc("/lookup", lookupHandler)
+	mux.HandleFunc("/lookupsrv", lookupSRVHandler)
+	mux.HandleFunc("/dial", dialHandler)
 
 	var server = &http.Server{
 		Addr:    bindAddr,
@@ -65,7 +67,7 @@ func ipInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func resolveHandler(w http.ResponseWriter, r *http.Request) {
+func lookupHandler(w http.ResponseWriter, r *http.Request) {
 	var hostname = r.URL.Query().Get("hostname")
 
 	if len(hostname) == 0 {
@@ -73,13 +75,65 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ips, err := net.LookupIP(hostname)
+	ips, err := net.LookupHost(hostname)
 
-	if err != nil {
+	if err != nil && len(ips) == 0 {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	if err := json.NewEncoder(w).Encode(ips); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func lookupSRVHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		domain  = r.URL.Query().Get("domain")
+		service = r.URL.Query().Get("service")
+	)
+
+	if len(domain) == 0 || len(service) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	cname, addrs, err := net.LookupSRV(service, "tcp", domain)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var resp = make(map[string]interface{})
+
+	resp["cname"] = cname
+	resp["addrs"] = addrs
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func dialHandler(w http.ResponseWriter, r *http.Request) {
+	var address = r.URL.Query().Get("address")
+
+	conn, err := net.Dial("tcp", address)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer conn.Close()
+
+	var resp = make(map[string]interface{})
+
+	resp["LocalAddr"] = conn.LocalAddr()
+	resp["RemoteAddr"] = conn.RemoteAddr()
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

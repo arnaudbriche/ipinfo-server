@@ -1,6 +1,6 @@
 all: test build
 
-build: 
+build: clean
 	go build -o bin/ipinfo-server .
 
 test:
