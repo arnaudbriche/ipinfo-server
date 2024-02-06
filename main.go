@@ -87,6 +87,18 @@ func lookupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type srvTarget struct {
+	Hostname string
+	Port     int16
+	IPS      []string
+	Error    string
+}
+
+type lookupSRVResponse struct {
+	CNAME   string
+	Targets []srvTarget
+}
+
 func lookupSRVHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		domain  = r.URL.Query().Get("domain")
@@ -105,10 +117,26 @@ func lookupSRVHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp = make(map[string]interface{})
+	var resp lookupSRVResponse
+	resp.CNAME = cname
 
-	resp["cname"] = cname
-	resp["addrs"] = addrs
+	for _, addr := range addrs {
+		var target srvTarget
+
+		target.Hostname = addr.Target
+		target.Port = int16(addr.Port)
+
+		ips, err := net.LookupHost(addr.Target)
+
+		if err != nil {
+			target.Error = err.Error()
+			resp.Targets = append(resp.Targets, target)
+			continue
+		}
+
+		target.IPS = ips
+		resp.Targets = append(resp.Targets, target)
+	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
