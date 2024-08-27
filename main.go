@@ -18,7 +18,7 @@ func main() {
 	}
 
 	var mux = http.NewServeMux()
-	mux.HandleFunc("/ipinfo", ipInfoHandler)
+	mux.HandleFunc("/egressipinfo", egressIPInfoHandler)
 	mux.HandleFunc("/lookup", lookupHandler)
 	mux.HandleFunc("/lookupsrv", lookupSRVHandler)
 	mux.HandleFunc("/dial", dialHandler)
@@ -36,7 +36,7 @@ func main() {
 	}
 }
 
-func ipInfoHandler(w http.ResponseWriter, r *http.Request) {
+func egressIPInfoHandler(w http.ResponseWriter, r *http.Request) {
 	var client http.Client
 
 	req, err := http.NewRequest("GET", "https://ipinfo.io", nil)
