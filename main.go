@@ -22,6 +22,7 @@ func main() {
 	mux.HandleFunc("/lookup", lookupHandler)
 	mux.HandleFunc("/lookupsrv", lookupSRVHandler)
 	mux.HandleFunc("/dial", dialHandler)
+	mux.HandleFunc("/clientip", clientIPHandler)
 
 	var server = &http.Server{
 		Addr:    bindAddr,
@@ -160,6 +161,18 @@ func dialHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp["LocalAddr"] = conn.LocalAddr()
 	resp["RemoteAddr"] = conn.RemoteAddr()
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func clientIPHandler(w http.ResponseWriter, r *http.Request) {
+	var resp = make(map[string]interface{})
+
+	resp["remote_addr"] = r.RemoteAddr
+	resp["x-forwarded-for"] = r.Header.Get("X-Forwarded-For")
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
