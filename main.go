@@ -169,10 +169,18 @@ func dialHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func clientIPHandler(w http.ResponseWriter, r *http.Request) {
-	var resp = make(map[string]interface{})
+	var (
+		resp    = make(map[string]interface{})
+		headers = make(map[string]string)
+	)
 
 	resp["remote_addr"] = r.RemoteAddr
-	resp["x-forwarded-for"] = r.Header.Get("X-Forwarded-For")
+
+	for k, v := range r.Header {
+		resp[k] = v
+	}
+
+	resp["headers"] = headers
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
